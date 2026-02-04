@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FIFA Men’s Ranking Points Calculator (SUM)</title>
+
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body>
+  <!-- HTML edit required because collapsible ranking panel needs a toggle control and a panel id for aria-controls -->
+
+  <div class="app">
+    <!-- LEFT DRAWER -->
+    <aside class="leftDrawer" id="leftDrawer" aria-label="Navigation">
+      <div class="leftHead">
+        <div class="brand">
+          <b>FIFA SUM Calculator</b>
+          <span>Single • Batch • Rankings</span>
+        </div>
+        <button class="btn secondary" id="closeLeftBtn" type="button" style="padding:8px 10px;border-radius:12px;">Close</button>
+      </div>
+
+      <nav class="nav" id="nav">
+        <button type="button" data-view="homeView" class="active">
+          <span class="ico">🏠</span> Home
+        </button>
+        <button type="button" data-view="singleView">
+          <span class="ico">⚽</span> Single Match
+        </button>
+        <button type="button" data-view="batchView">
+          <span class="ico">🧾</span> Batch Mode
+        </button>
+        <button type="button" data-view="rankingsView">
+          <span class="ico">📊</span> Rankings
+        </button>
+        <button type="button" data-view="guideView">
+          <span class="ico">📘</span> Guide / FAQ
+        </button>
+      </nav>
+
+      <div class="drawerFooter">
+        No reload • Shared state • Rankings panel on the right for Apply / Undo / Reset.
+      </div>
+    </aside>
+
+    <div class="overlay" id="overlay"></div>
+
+    <!-- RIGHT RANKING PANEL -->
+    <aside class="rightPanel" id="rightPanel" aria-label="Ranking panel">
+      <div class="rightHead">
+        <b>Rankings</b>
+        <span class="pill" id="rankStatePill">Current</span>
+      </div>
+
+      <div class="rightBody">
+        <div class="box">
+          <div class="boxHead">
+            <span class="mini">Current Ranking (active)</span>
+            <span class="pill" id="currentCountPill">0 teams</span>
+          </div>
+          <div style="padding:12px;">
+            <input id="rightSearchCurrent" type="text" placeholder="Search team…" />
+            <div style="height:10px;"></div>
+            <div class="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="tdRank">RK</th>
+                    <th class="tdFlag">Flag</th>
+                    <th>Team</th>
+                    <th class="tdPts">Points</th>
+                  </tr>
+                </thead>
+                <tbody id="rightCurrentBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        
+
+      </div>
+
+      <div class="rightFooter">
+        <div class="btnRow">
+          <button class="btn" id="applyBtn" type="button">✅ Apply Changes</button>
+          <button class="btn secondary" id="undoBtn" type="button">↩️ Undo</button>
+          <button class="btn danger" id="resetBtnGlobal" type="button">🧹 Reset</button>
+        </div>
+        <div class="mini" id="historyMini">History: 0</div>
+      </div>
+    </aside>
+
+    <div class="rightHandle" id="rightHandle" aria-label="Open ranking panel">
+      <div class="rightArrow"></div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <main style="flex:1;min-width:0;">
+      <div class="topbar">
+        <div class="topbarInner">
+          <button class="hamb" id="openLeftBtn" aria-label="Open menu">
+            <div class="hambLines">
+              <span></span><span></span><span></span>
+            </div>
+          </button>
+
+          <div class="topTitle">
+            <b id="topTitle">Home</b>
+            <span id="topSubtitle">Welcome • Official FIFA SUM system</span>
+          </div>
+
+          <div class="badge"><span class="dot"></span> Live Preview • State + Undo</div>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <div class="container">
+
+          <!-- HOME VIEW -->
+          <section class="view active" id="homeView">
+            <div class="hero">
+              <h1>Welcome 👋</h1>
+              <p>
+                This website calculates FIFA Men’s World Ranking points using FIFA’s official SUM (modified Elo) method.
+                Pick national teams from the ranking library (with real flag emojis), enter match details, and preview how rankings would change —
+                then <b>Apply</b> when you’re ready.
+              </p>
+
+              <div class="homeActions" style="margin-top:18px;">
+                <div class="homeCard">
+                  <b>⚽ Single Match Ranking Calculator</b>
+                  <p>Calculate points for one match with optional knockout & penalties rules, plus a simulated ranking preview.</p>
+                  <button class="btn" type="button" id="goSingleBtn">Open Single Match</button>
+                </div>
+
+                <div class="homeCard">
+                  <b>🧾 Batch Mode (Multiple Matches)</b>
+                  <p>Add many matches, apply them in order, and preview the full ranking after the sequence.</p>
+                  <button class="btn" type="button" id="goBatchBtn">Open Batch Mode</button>
+                </div>
+              </div>
+
+              <div class="hint" style="margin-top:14px;">
+                Tip: Use the <b>right ranking panel</b> to preview “Ranking After Results”, then Apply / Undo / Reset anytime.
+              </div>
+            </div>
+          </section>
+
+          <!-- SINGLE MATCH VIEW -->
+          <section class="view" id="singleView">
+            <div class="grid">
+              <section class="card">
+                <div class="card-head">
+                  <h2>Single Match <span class="pill">Calculator</span></h2>
+                  <span class="pill" id="singleModePill">Mode: Standard</span>
+                </div>
+
+                <div class="content">
+                  <div class="two">
+                    <!-- Team A -->
+                    <div class="card" style="box-shadow:none;">
+                      <div class="card-head">
+                        <h2>Team A</h2>
+                        <span class="pill">Left</span>
+                      </div>
+                      <div class="content">
+                        <div class="row">
+                          <div class="picker">
+                            <label for="singleA_pick">Select from library (search)</label>
+                            <input id="singleA_pick" class="pickerInput" type="text" placeholder="Type to search… or enter custom team" autocomplete="off" />
+                            <button class="pickerBtn" type="button" data-pickbtn="singleA"><div class="caret"></div></button>
+                            <div class="dropdown" id="singleA_drop"></div>
+                            <div class="hint">Choose a team to auto-fill points & metadata. Manual is always allowed.</div>
+                          </div>
+                          <div>
+                            <label for="singleA_pts">Team A Points (starting)</label>
+                            <input id="singleA_pts" type="number" min="0" step="0.01" value="1500" />
+                            <div class="hint">If you change this, the simulation uses your value.</div>
+                          </div>
+                        </div>
+
+                        <div style="height:10px;"></div>
+                        <div class="row">
+                          <div>
+                            <label for="singleA_name">Team A Name (manual)</label>
+                            <input id="singleA_name" type="text" value="Team A" />
+                          </div>
+                          <div>
+                            <label for="singleA_conf">Confederation</label>
+                            <input id="singleA_conf" type="text" value="—" disabled />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Team B -->
+                    <div class="card" style="box-shadow:none;">
+                      <div class="card-head">
+                        <h2>Team B</h2>
+                        <span class="pill">Right</span>
+                      </div>
+                      <div class="content">
+                        <div class="row">
+                          <div class="picker">
+                            <label for="singleB_pick">Select from library (search)</label>
+                            <input id="singleB_pick" class="pickerInput" type="text" placeholder="Type to search… or enter custom team" autocomplete="off" />
+                            <button class="pickerBtn" type="button" data-pickbtn="singleB"><div class="caret"></div></button>
+                            <div class="dropdown" id="singleB_drop"></div>
+                            <div class="hint">Choose a team to auto-fill points & metadata. Manual is always allowed.</div>
+                          </div>
+                          <div>
+                            <label for="singleB_pts">Team B Points (starting)</label>
+                            <input id="singleB_pts" type="number" min="0" step="0.01" value="1500" />
+                            <div class="hint">Negative inputs are blocked.</div>
+                          </div>
+                        </div>
+
+                        <div style="height:10px;"></div>
+                        <div class="row">
+                          <div>
+                            <label for="singleB_name">Team B Name (manual)</label>
+                            <input id="singleB_name" type="text" value="Team B" />
+                          </div>
+                          <div>
+                            <label for="singleB_conf">Confederation</label>
+                            <input id="singleB_conf" type="text" value="—" disabled />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="height:12px;"></div>
+
+                  <div class="row">
+                    <div>
+                      <label for="single_importance">Match Importance (I)</label>
+                      <select id="single_importance">
+                        <option value="" selected disabled>Choose match importance…</option>
+                        <option value="5" data-type="neutral">Friendly outside International Match Calendar (I=5)</option>
+                        <option value="10" data-type="neutral">Friendly during International Match Calendar (I=10)</option>
+                        <option value="15" data-type="neutral">Nations League group phase (I=15)</option>
+                        <option value="25" data-type="neutral">Nations League play-off / finals (I=25)</option>
+                        <option value="25" data-type="confedQual">Qualifiers (Confederation finals / World Cup) (I=25)</option>
+                        <option value="35" data-type="confedFinals">Confederation finals up to QF (I=35)</option>
+                        <option value="40" data-type="confedFinals">Confederation finals from QF+; Confed Cup (I=40)</option>
+                        <option value="50" data-type="neutral">World Cup finals up to QF (I=50)</option>
+                        <option value="60" data-type="neutral">World Cup finals from QF onwards (I=60)</option>
+                      </select>
+                      <div class="hint" id="confedHintSingle" style="display:none;">
+                        Confederation competitions are disabled because teams are from different confederations.
+                      </div>
+                    </div>
+
+                    <div>
+                      <label for="single_result">Match Result (regulation/extra time)</label>
+                      <select id="single_result">
+                        <option value="A_WIN">Team A Win</option>
+                        <option value="DRAW">Draw</option>
+                        <option value="B_WIN">Team B Win</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style="height:12px;"></div>
+
+                  <div class="row">
+                    <label class="toggle toggle-click">
+<input id="single_isKnockoutFinals" type="checkbox" />
+                      <div class="ttext">
+                        <b>Knockout “No-Loss” Rule (Final Competitions)</b>
+                        <span>In knockout final competitions, a loss (or PSO loss) cannot reduce points.</span>
+                      </div>
+</label>
+
+                    <label class="toggle toggle-click">
+<input id="single_isPenalties" type="checkbox" />
+                      <div class="ttext">
+                        <b>Decided by Penalties (PSO)</b>
+                        <span>PSO winner/loser values are applied automatically.</span>
+                      </div>
+</label>
+                  </div>
+
+                  <div style="height:12px;"></div>
+
+                  <div class="actions" style="margin-top: 14px;">
+                    <div class="warn" id="single_warnBox"></div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                      <span class="pill" id="single_statusPill">Waiting for valid inputs…</span>
+                      <span class="pill" id="single_flagsPill">—</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Results (clean) -->
+              <section class="card">
+                <div class="card-head">
+                  <h2>Results <span class="pill">Live Output</span></h2>
+                  <span class="pill">Preview updates in ranking panel →</span>
+                </div>
+
+                <div class="content">
+                  <div class="results">
+                    <div class="scorebox" id="single_boxA">
+                      <div class="top">
+                        <div class="teamLine">
+                          <span class="flag" id="single_outAFlag">🏳️</span>
+                          <div style="min-width:0;">
+                            <div class="tName" id="single_outAName">Team A</div>
+                            <div class="small">Starting: <span id="single_outAPbefore">1500.00</span></div>
+                          </div>
+                        </div>
+                        <div class="small" style="text-align:right;">New total</div>
+                      </div>
+                      <div class="big">
+                        <div class="total" id="single_outAPafter">—</div>
+                        <div class="delta neu" id="single_outADelta">—</div>
+                      </div>
+                    </div>
+
+                    <div class="scorebox" id="single_boxB">
+                      <div class="top">
+                        <div class="teamLine">
+                          <span class="flag" id="single_outBFlag">🏳️</span>
+                          <div style="min-width:0;">
+                            <div class="tName" id="single_outBName">Team B</div>
+                            <div class="small">Starting: <span id="single_outBPbefore">1500.00</span></div>
+                          </div>
+                        </div>
+                        <div class="small" style="text-align:right;">New total</div>
+                      </div>
+                      <div class="big">
+                        <div class="total" id="single_outBPafter">—</div>
+                        <div class="delta neu" id="single_outBDelta">—</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="hint" style="margin-top:12px;">
+                    This match automatically generates a <b>simulated</b> ranking in the right panel. Use <b>Apply Changes</b> to commit it.
+                  </div>
+                </div>
+              </section>
+              <!-- ✅ ADVANCED / TECHNICAL DETAILS (MUST stay collapsed & unchanged; kept from earlier build) -->
+              <details class="advanced" id="advancedPanel">
+                <summary>
+                  <span class="adv-title"><span class="chev"></span> Advanced / Technical Details</span>
+                  <span class="pill">Collapsed by default</span>
+                </summary>
+                <div class="adv-content">
+                  <div class="math" id="detailMath">
+                    <b>Details:</b>
+                    <div style="margin-top:6px;">
+                      Expected results:
+                      <span class="pill" id="wePill">We: —</span>
+                    </div>
+                    <div style="margin-top:10px;">
+                      dr(A) = <code id="drA">—</code> • dr(B) = <code id="drB">—</code> • I = <code id="iVal">—</code>
+                    </div>
+                    <div style="margin-top:6px;">
+                      W(A) = <code id="outAW">—</code> • W(B) = <code id="outBW">—</code>
+                    </div>
+                    <div style="margin-top:6px;">
+                      Knockout no-loss rule: <code id="koRule">OFF</code> • Penalties: <code id="psoRule">OFF</code>
+                    </div>
+
+                    <div style="height:12px;"></div>
+                    <b>Formula reference:</b>
+                    <div style="margin-top:6px;">
+                      <code>Pafter = Pbefore + I × (W − We)</code>
+                    </div>
+                    <div style="margin-top:6px;">
+                      <code>We = 1 / (10^(−dr/600) + 1)</code>
+                    </div>
+
+                    <div class="footer-note">
+                      Rounding: all intermediate steps are computed at full precision; only the final totals and deltas are rounded to 2 decimals.
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </section>
+
+          <!-- BATCH MODE VIEW -->
+          <section class="view" id="batchView">
+            <div class="grid">
+              <section class="card">
+                <div class="card-head">
+                  <h2>Batch Mode <span class="pill">Multiple Matches</span></h2>
+                  <span class="pill" id="batchCountPill">0 matches</span>
+                </div>
+
+                <div class="content">
+                  <div class="two">
+                    <div class="card" style="box-shadow:none;">
+                      <div class="card-head">
+                        <h2>Add / Edit Match</h2>
+                        <span class="pill" id="batchEditPill">New</span>
+                      </div>
+                      <div class="content">
+                        <div class="row">
+                          <div class="picker">
+                            <label for="batchA_pick">Team A</label>
+                            <input id="batchA_pick" class="pickerInput" type="text" placeholder="Search team… or custom" autocomplete="off" />
+                            <div class="pickerBtn" type="button" data-pickbtn="batchA"><div class="caret"></div></div>
+                            <div class="dropdown" id="batchA_drop"></div>
+                          </div>
+                          <div>
+                            <label for="batchA_pts">Team A Points (optional override)</label>
+                            <input id="batchA_pts" type="number" min="0" step="0.01" placeholder="Leave blank to use ranking points" />
+                          </div>
+                        </div>
+
+                        <div style="height:10px;"></div>
+
+                        <div class="row">
+                          <div class="picker">
+                            <label for="batchB_pick">Team B</label>
+                            <input id="batchB_pick" class="pickerInput" type="text" placeholder="Search team… or custom" autocomplete="off" />
+                            <button class="pickerBtn" type="button" data-pickbtn="batchB"><div class="caret"></div></button>
+                            <div class="dropdown" id="batchB_drop"></div>
+                          </div>
+                          <div>
+                            <label for="batchB_pts">Team B Points (optional override)</label>
+                            <input id="batchB_pts" type="number" min="0" step="0.01" placeholder="Leave blank to use ranking points" />
+                          </div>
+                        </div>
+
+                        <div style="height:10px;"></div>
+
+                        <div class="row">
+                          <div>
+                            <label for="batch_importance">Match Importance (I)</label>
+                            <select id="batch_importance">
+                              <option value="" selected disabled>Choose match importance…</option>
+                              <option value="5" data-type="neutral">Friendly outside International Match Calendar (I=5)</option>
+                              <option value="10" data-type="neutral">Friendly during International Match Calendar (I=10)</option>
+                              <option value="15" data-type="neutral">Nations League group phase (I=15)</option>
+                              <option value="25" data-type="neutral">Nations League play-off / finals (I=25)</option>
+                              <option value="25" data-type="confedQual">Qualifiers (Confederation finals / World Cup) (I=25)</option>
+                              <option value="35" data-type="confedFinals">Confederation finals up to QF (I=35)</option>
+                              <option value="40" data-type="confedFinals">Confederation finals from QF+; Confed Cup (I=40)</option>
+                              <option value="50" data-type="neutral">World Cup finals up to QF (I=50)</option>
+                              <option value="60" data-type="neutral">World Cup finals from QF onwards (I=60)</option>
+                            </select>
+                            <div class="hint" id="confedHintBatch" style="display:none;">
+                              Confederation competitions are disabled because teams are from different confederations.
+                            </div>
+                          </div>
+                          <div>
+                            <label for="batch_result">Result</label>
+                            <select id="batch_result">
+                              <option value="A_WIN">Team A Win</option>
+                              <option value="DRAW">Draw</option>
+                              <option value="B_WIN">Team B Win</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style="height:10px;"></div>
+
+                        <div class="row">
+                          <label class="toggle toggle-click">
+<input id="batch_isKnockoutFinals" type="checkbox" />
+                            <div class="ttext">
+                              <b>Knockout “No-Loss” Rule</b>
+                              <span>Applies “no points lost for KO defeat” rule in simulation.</span>
+                            </div>
+</label>
+
+                          <label class="toggle toggle-click">
+<input id="batch_isPenalties" type="checkbox" />
+                            <div class="ttext">
+                              <b>Decided by Penalties (PSO)</b>
+                              <span>Forces PSO values automatically.</span>
+                            </div>
+</label>
+                        </div>
+
+                        <div style="height:10px;"></div>
+
+                        <div class="actions">
+                          <div class="warn" id="batch_warnBox"></div>
+                          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <button class="btn" id="batchAddBtn" type="button">➕ Add to list</button>
+                            <button class="btn secondary" id="batchClearFormBtn" type="button">Clear</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="card" style="box-shadow:none;">
+                      <div class="card-head">
+                        <h2>Match List</h2>
+                        <span class="pill">Order matters</span>
+                      </div>
+                      <div class="content">
+                        <div class="list" id="batchList"></div>
+
+                        <div class="actions" style="margin-top:14px;">
+                          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <button class="btn" id="batchApplyAllBtn" type="button">✅ Simulate all matches</button>
+                            <button class="btn secondary" id="batchClearListBtn" type="button">🗑️ Clear list</button>
+                          </div>
+                          <span class="pill" id="batchSimStatus">No simulation yet</span>
+                        </div>
+
+                        <div class="hint" style="margin-top:10px;" id="batchSummaryHint">
+                          After simulation, check the right ranking panel → “Ranking After Results”, then Apply to commit.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <!-- RANKINGS VIEW -->
+          <section class="view" id="rankingsView">
+            <div class="grid">
+              <section class="card">
+                <div class="card-head">
+                  <div class="rankingsHeadLeft">
+                  <h2>Rankings <span class="pill">Live</span></h2>
+                  <input type="text" id="rankingsSearchInput" class="rankingsSearch" placeholder="Search team..." autocomplete="off" />
+                </div>
+                  <div style="display:flex; gap:10px; align-items:center;">
+                    <span class="pill" id="rankingsCountPill">0 teams</span>
+                    <button class="btn danger" id="rankingsResetBtn" type="button">Reset</button>
+                  </div>
+                </div>
+                <div class="content">
+                  <div class="tableWrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th class="tdRank">RK</th>
+                          <th class="tdFlag">Flag</th>
+                          <th>Team</th>
+                          <th class="tdPts">Points</th>
+                        </tr>
+                      </thead>
+                      <tbody id="rankingsPageBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <!-- GUIDE VIEW -->
+          <section class="view" id="guideView">
+            <div class="grid">
+              <section class="card">
+                <div class="card-head">
+                  <h2>Guide / FAQ <span class="pill">How FIFA SUM works</span></h2>
+                  <span class="pill">Official formulas included</span>
+                </div>
+                <div class="content">
+                  <div style="line-height:1.55;color:rgba(232,238,252,.84);font-size:13.5px;">
+                    <p style="margin-top:0;">
+                      FIFA’s Men’s World Ranking uses a “modified Elo” approach called the <b>SUM method</b>.
+                      Instead of giving fixed points for wins/draws/losses, the points you gain or lose depend on:
+                      <b>match importance</b>, <b>opponent strength</b>, and <b>the result</b>.
+                    </p>
+
+                    <h3 style="margin:14px 0 6px 0;font-size:14.5px;">1) What are FIFA ranking points?</h3>
+                    <p style="margin:0;color:rgba(232,238,252,.78);">
+                      Each national team has a points total. After every match, FIFA updates those points.
+                      Strong teams are expected to win more often, so they gain fewer points for beating weaker teams,
+                      and can lose more points if they underperform.
+                    </p>
+
+                    <h3 style="margin:14px 0 6px 0;font-size:14.5px;">2) Why match importance matters (I)</h3>
+                    <p style="margin:0;color:rgba(232,238,252,.78);">
+                      FIFA weights matches. A friendly changes rankings less than a World Cup match.
+                      In the calculator, you choose the official importance value <b>I</b> (friendly, qualifiers, confederation finals, World Cup, etc.).
+                    </p>
+
+                    <h3 style="margin:14px 0 6px 0;font-size:14.5px;">3) Expected result (We) — why strong teams gain fewer points</h3>
+                    <p style="margin:0;color:rgba(232,238,252,.78);">
+                      FIFA estimates how likely each team is to get a good result based on the difference in their current points.
+                      If Team A is much stronger, Team A’s expected score is higher — so a normal win gives fewer extra points.
+                      But if the strong team draws or loses, the change can be bigger.
+                    </p>
+
+                    <h3 style="margin:14px 0 6px 0;font-size:14.5px;">4) Penalty shootouts (PSO)</h3>
+                    <p style="margin:0;color:rgba(232,238,252,.78);">
+                      If a knockout match is decided by penalties, FIFA uses special result values:
+                      the PSO winner is treated as “better than a draw but not a full win”.
+                      The PSO loser is treated similarly to a draw result for ranking purposes.
+                    </p>
+
+                    <h3 style="margin:14px 0 6px 0;font-size:14.5px;">5) Knockout protection rule</h3>
+                    <p style="margin:0;color:rgba(232,238,252,.78);">
+                      In knockout rounds of final competitions, FIFA protects teams from <b>losing ranking points</b> if they lose the match
+                      (including losing on penalties). In this calculator, turning on “Knockout No-Loss Rule” enforces that protection.
+                    </p>
+
+                    <div style="height:14px;"></div>
+
+                    <div class="tableWrap" style="padding:12px;">
+                      <b style="display:block;margin-bottom:8px;">Official FIFA SUM Formulas</b>
+                      <div class="math">
+                        <div><code>Pafter = Pbefore + I × (W − We)</code></div>
+                        <div style="margin-top:6px;"><code>We = 1 / (10^(−dr/600) + 1)</code></div>
+                        <div style="margin-top:6px;">where <code>dr</code> is the difference in the teams’ current ranking points.</div>
+                      </div>
+
+                      <div style="height:12px;"></div>
+
+                      <b style="display:block;margin-bottom:8px;">Result values (W)</b>
+                      <div class="math">
+                        <div>Win: <code>1.0</code> • Draw: <code>0.5</code> • Loss: <code>0</code></div>
+                        <div style="margin-top:6px;">Penalty shootout (PSO): Winner <code>0.75</code> • Loser <code>0.5</code></div>
+                      </div>
+
+                      <div style="height:12px;"></div>
+
+                      <b style="display:block;margin-bottom:8px;">Knockout no-loss rule</b>
+                      <div class="math">
+                        <div>If enabled and a team’s result is a loss (<code>W=0</code>) or PSO loss (<code>W=0.5</code>), then:</div>
+                        <div style="margin-top:6px;"><code>Pafter cannot be less than Pbefore</code></div>
+                      </div>
+                    </div>
+
+                    <div class="hint" style="margin-top:12px;">
+                      Note: The “Advanced / Technical Details” panel at the bottom of Single Match stays separate and unchanged.
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
+
